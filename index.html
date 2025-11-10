@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <title>Lab 5 Instanced Cubes</title>
+    <link rel="stylesheet" href="./model_viewer.css">
+</head>
+
+<body>
+    <div class="canvas-container">
+        <canvas id="gl-canvas"> <!-- The size is controlled in JavaScript -->
+            Your browser does not support the HTML5 canvas element
+        </canvas>
+    </div>
+
+    <div class="controls-container">
+
+    <script id="vertex-shader" type="x-shader/x-vertex">
+        #version 300 es
+        precision mediump float;
+
+        in vec4 aPosition;
+        in vec4 aColor;
+
+        uniform mat4 worldToNDCMatrix;
+        uniform mat4 modelToWorldMatrix;
+
+        uniform mat4 uModelViewMatrix;
+        uniform mat4 uProjectionMatrix;
+
+        out vec4 vColor;
+
+        void main() {
+
+            // Perform transformations
+            gl_Position = uProjectionMatrix * uModelViewMatrix * worldToNDCMatrix * modelToWorldMatrix * aPosition;
+
+            vColor = aColor;
+        }
+    </script>
+
+
+    <script id = "fragment-shader" type = "x-shader/x-fragment">
+        #version 300 es
+        precision mediump float;
+
+        in vec4 vColor;
+        out vec4 fColor;
+
+        void main() {
+            fColor = vColor;
+        }
+    </script>
+
+    <script type="text/javascript" src="./models/teapot.js"></script>
+    <script type="text/javascript" src="./models/bunny.js"></script>
+    <script type="text/javascript" src="./common/init_shaders.js"></script>
+    <script type="text/javascript" src="./common/matrix_vector_utils.js"></script>
+    <script type="text/javascript" src="./common/camera_utils.js"></script>
+    <script type="text/javascript" src="./model_viewer.js"></script>
+
+    <div class="info">
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <p class="sliderParagraph">Select Model:</p>
+            <select id="modelDropDown">
+                <option value="teapot" selected="selected">Teapot</option>
+                <option value="bunny">Bunny</option>
+            </select>
+        </div>
+
+        <ul>
+            <li>Left click + drag to orbit camera</li>
+            <li>Middle click + drag to pan camera</li>
+            <li>Right click + drag to move camera forward / backward</li>
+            <li>Or mouse wheel to move camera forward / backward</li>
+            <li>R key to reset view.</li>
+            <li>F key to focus view to model.</li>
+        </ul>
+    </div>
+
+    <div class="reset-info-container">
+        <button class="button" id="resetButton">Reset View</button>
+    </div>
+
+    <div class="slider-column">
+        <div class="slider-group">
+            <p class="sliderParagraph">Near Clipping Plane: <span id="nearClippingPlaneSliderValue"></span></p>
+            <div class="slidecontainer">
+                <input type="range" min="0.1" max="30" value="0.1" step="0.1" class="slider" id="nearClippingPlaneSlider">
+            </div>
+        </div>
+
+        <div class="slider-group">
+            <p class="sliderParagraph">Far Clipping Plane: <span id="farClippingPlaneSliderValue"></span></p>
+            <div class="slidecontainer">
+                <input type="range" min="0.1" max="30" value="20" step="0.1" class="slider" id="farClippingPlaneSlider">
+            </div>
+        </div>
+
+        <div class="slider-group">
+            <p class="sliderParagraph">Field of View: <span id="fovSliderValue"></span></p>
+            <div class="slidecontainer">
+                <input type="range" min="10" max="120" value="45" step="5" class="slider" id="fovSlider">
+            </div>
+        </div>
+    </div>
+    </div>
+
+</body>
+</html>
