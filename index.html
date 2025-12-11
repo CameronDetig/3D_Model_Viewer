@@ -8,39 +8,118 @@
 
 <body>
     <div class="canvas-container">
-        <canvas id="gl-canvas"> <!-- The size is controlled in JavaScript -->
+        <canvas id="gl-canvas"> <!-- The canvas size is controlled in JavaScript -->
             Your browser does not support the HTML5 canvas element
         </canvas>
     </div>
 
-    <div class="controls-container">
+    <script id="model-vertex-shader" type="x-shader/x-vertex">
+        #version 300 es
+        precision mediump float;
 
-    <script id="vertex-shader" type="x-shader/x-vertex">
+        in vec4 aPosition;
+        in vec4 aNormal;
+
+        // Normal, Light, and Eye vectors 
+        out vec3 N, L, E;
+        out float lightDistance; // Distance from point to light
+
+        uniform mat4 modelToWorldMatrix;
+        uniform mat4 uModelViewMatrix;
+        uniform mat4 uProjectionMatrix;
+
+        uniform vec3 uLightWorldPosition;
+        uniform vec3 uCameraWorldPosition;
+        uniform mat3 uTransformNormalsMatrix;
+
+        void main() {
+
+            // Transform the model point and light position to world space coordinates
+            vec3 pointWorldPosition = (modelToWorldMatrix * aPosition).xyz;
+
+            // L = normalize(uLightWorldPosition - pointWorldPosition);
+            vec3 lightVector = uLightWorldPosition - pointWorldPosition;
+            lightDistance = length(lightVector); // Calculate distance to light
+            L = normalize(lightVector); 
+
+            E = -normalize(pointWorldPosition - uCameraWorldPosition.xyz);
+
+            // transform normals from model space to world space and preserve their perpendicularity to surfaces
+            N = normalize(uTransformNormalsMatrix * aNormal.xyz);
+
+            gl_Position = uProjectionMatrix * uModelViewMatrix * modelToWorldMatrix * aPosition;
+        }
+    </script>
+
+
+    <script id = "model-fragment-shader" type = "x-shader/x-fragment">
+        #version 300 es
+        precision mediump float;
+
+        uniform vec4 uAmbientProduct;
+        uniform vec4 uDiffuseProduct;
+        uniform vec4 uSpecularProduct;
+
+        uniform float uDiffuseIntensity;
+        uniform float uSpecularIntensity;
+        uniform float uAmbientIntensity;
+
+        uniform float uShininess;
+
+        float attenConstant = 1.0;
+        float attenLinear = 0.001;
+        float attenQuadratic = 0.0001;
+
+        in vec3 N, L, E;
+        in float lightDistance; // Distance from point to light
+
+        out vec4 fColor;
+
+        void main() {
+            float attenuation = 1.0 / (attenConstant + (attenLinear * lightDistance) + (attenQuadratic * lightDistance * lightDistance));
+
+            vec3 H = normalize( L + E ); // Half way vector
+            vec4 ambient = uAmbientProduct * uAmbientIntensity;
+
+            float Kd = max( dot(L, N), 0.0 );
+            vec4 diffuse = Kd * uDiffuseProduct * attenuation * uDiffuseIntensity;   // diffuse reflection with attenuation and intensity control
+
+            float Ks = pow( max(dot(N, H), 0.0), uShininess );
+            vec4 specular = Ks * uSpecularProduct * attenuation * uSpecularIntensity;   // specular reflection with attenuation and intensity control
+
+            if (dot(L, N) < 0.0) {   // light is not visible from point
+                specular = vec4(0.0, 0.0, 0.0, 1.0);
+            }
+
+            fColor = ambient + diffuse + specular;
+            fColor.a = 1.0;
+        }
+    </script>
+
+
+
+    <script id="grid-vertex-shader" type="x-shader/x-vertex">
         #version 300 es
         precision mediump float;
 
         in vec4 aPosition;
         in vec4 aColor;
 
-        uniform mat4 worldToNDCMatrix;
         uniform mat4 modelToWorldMatrix;
-
         uniform mat4 uModelViewMatrix;
         uniform mat4 uProjectionMatrix;
 
         out vec4 vColor;
 
         void main() {
-
             // Perform transformations
-            gl_Position = uProjectionMatrix * uModelViewMatrix * worldToNDCMatrix * modelToWorldMatrix * aPosition;
+            gl_Position = uProjectionMatrix * uModelViewMatrix * modelToWorldMatrix * aPosition;
 
             vColor = aColor;
         }
     </script>
 
-
-    <script id = "fragment-shader" type = "x-shader/x-fragment">
+    <script id="grid-fragment-shader" type="x-shader/x-fragment">
         #version 300 es
         precision mediump float;
 
@@ -52,59 +131,177 @@
         }
     </script>
 
-    <script type="text/javascript" src="./models/teapot.js"></script>
-    <script type="text/javascript" src="./models/bunny.js"></script>
+
+    <script id="light-vertex-shader" type="x-shader/x-vertex">
+        #version 300 es
+        precision mediump float;
+
+        in vec4 aPosition;
+
+        uniform mat4 uModelToWorldMatrix;
+        uniform mat4 uModelViewMatrix;
+        uniform mat4 uProjectionMatrix;
+
+        uniform vec4 uLightColor;
+
+        out vec4 vColor;
+
+        void main() {
+            // Perform transformations
+            gl_Position = uProjectionMatrix * uModelViewMatrix * uModelToWorldMatrix * aPosition;
+
+            vColor = uLightColor;
+        }
+    </script>
+
+    <script id="light-fragment-shader" type="x-shader/x-fragment">
+        #version 300 es
+        precision mediump float;
+
+        in vec4 vColor;
+        out vec4 fColor;
+
+        void main() {
+            fColor = vColor;
+        }
+    </script>
+
     <script type="text/javascript" src="./common/init_shaders.js"></script>
     <script type="text/javascript" src="./common/matrix_vector_utils.js"></script>
     <script type="text/javascript" src="./common/camera_utils.js"></script>
+
+    <script type="text/javascript" src="./teapot_gen/createTeapotData.js"></script>
+    <script type="text/javascript" src="./teapot_gen/teapot_vertices.js"></script>
+    <script type="text/javascript" src="./teapot_gen/teapot_patches.js"></script>
+
+    <script type="text/javascript" src="./objects/quaternion_camera.js"></script>
+    <script type="text/javascript" src="./objects/model.js"></script>
+    <script type="text/javascript" src="./objects/grid.js"></script>
+    <script type="text/javascript" src="./objects/light.js"></script>
+    <script type="text/javascript" src="./handle_input.js"></script>
     <script type="text/javascript" src="./model_viewer.js"></script>
 
-    <div class="info">
-        <div style="display: flex; align-items: center; gap: 10px;">
-            <p class="sliderParagraph">Select Model:</p>
-            <select id="modelDropDown">
-                <option value="teapot" selected="selected">Teapot</option>
-                <option value="bunny">Bunny</option>
-            </select>
+    <div class="controls-container">
+
+        <div class="info">
+            <ul>
+                <li>Left click + drag to orbit camera</li>
+                <li>Middle click + drag to pan camera</li>
+                <li>Right click + drag to move camera forward / backward</li>
+                <li>Or mouse wheel to move camera forward / backward</li>
+                <li>R key to reset view.</li>
+                <li>F key to focus view to model.</li>
+            </ul>
         </div>
 
-        <ul>
-            <li>Left click + drag to orbit camera</li>
-            <li>Middle click + drag to pan camera</li>
-            <li>Right click + drag to move camera forward / backward</li>
-            <li>Or mouse wheel to move camera forward / backward</li>
-            <li>R key to reset view.</li>
-            <li>F key to focus view to model.</li>
-        </ul>
-    </div>
-
-    <div class="reset-info-container">
-        <button class="button" id="resetButton">Reset View</button>
-    </div>
-
-    <div class="slider-column">
-        <div class="slider-group">
-            <p class="sliderParagraph">Near Clipping Plane: <span id="nearClippingPlaneSliderValue"></span></p>
-            <div class="slidecontainer">
-                <input type="range" min="0.1" max="30" value="0.1" step="0.1" class="slider" id="nearClippingPlaneSlider">
-            </div>
+        <div class="reset-button-container">
+            <button class="button" id="resetButton">Reset View</button>
         </div>
 
-        <div class="slider-group">
-            <p class="sliderParagraph">Far Clipping Plane: <span id="farClippingPlaneSliderValue"></span></p>
-            <div class="slidecontainer">
-                <input type="range" min="0.1" max="30" value="20" step="0.1" class="slider" id="farClippingPlaneSlider">
-            </div>
+
+        <div class="label_and_input">
+            <label for="Model_Subdivisions">Model Subdivisions</label>
+            <input type="number" id="Model_Subdivisions" min="1" max="8" step="1" value="5">
         </div>
 
-        <div class="slider-group">
-            <p class="sliderParagraph">Field of View: <span id="fovSliderValue"></span></p>
-            <div class="slidecontainer">
-                <input type="range" min="10" max="120" value="45" step="5" class="slider" id="fovSlider">
-            </div>
+        <div class="label_and_input">
+            <label for="Near_Clipping">Near Clipping</label>
+            <input type="number" id="Near_Clipping" min="1" step="10" value="10">
+
+            <label for="Far_Clipping">Far Clipping</label>
+            <input type="number" id="Far_Clipping" min="1" step="10" value="1000">
         </div>
+
+        <div class="label_and_input">
+            <label for="Camera_FOV">Field of View</label>
+            <input type="number" id="Camera_FOV" min="10" max="120" step="5" value="45">
+        </div>
+
+
+        <label class="centered_p">Light Attributes</label>
+        <label>Position</label>
+        <div class="transform-grid">
+            <input type="number" id="Light_X_Pos" step="5" value="50">
+            <input type="number" id="Light_Y_Pos" step="5" value="100">
+            <input type="number" id="Light_Z_Pos" step="5" value="100">
+        </div>
+
+        <div class="label_and_input">
+            <label for="light_diffuse_color">Diffuse Color:</label>
+            <input type="color" id="light_diffuse_color" value="#ffffff"><br><br>
+
+            <label for="Light_Diffuse_Intensity">Diffuse Intensity</label>
+            <input type="number" id="Light_Diffuse_Intensity" min="0" step="1" value="1">
+        </div>
+
+        <div class="label_and_input">
+            <label for="light_specular_color">Specular Color:</label>
+            <input type="color" id="light_specular_color" value="#ffffff"><br><br>
+
+            <label for="Light_Specular_Intensity">Specular Intensity</label>
+            <input type="number" id="Light_Specular_Intensity" min="0" step="1" value="1">
+        </div>
+
+        <div class="label_and_input">
+            <label for="light_ambient_color">Ambient Color:</label>
+            <input type="color" id="light_ambient_color" value="#141414"><br><br>
+
+            <label for="Light_Ambient_Intensity">Ambient Intensity</label>
+            <input type="number" id="Light_Ambient_Intensity" min="0" step="1" value="1">
+        </div>
+
+        <br>
+
+        <label class="centered_p">Material Attributes</label>
+
+        <div class="label_and_input">
+            <label for="material_diffuse_color">Diffuse Color:</label>
+            <input type="color" id="material_diffuse_color" value="#AAFF00"><br><br>
+        </div>
+
+        <div class="label_and_input">
+            <label for="material_specular_color">Specular Color:</label>
+            <input type="color" id="material_specular_color" value="#ffffff"><br><br>
+        </div>
+
+        <div class="label_and_input">
+            <label for="material_ambient_color">Ambient Color:</label>
+            <input type="color" id="material_ambient_color" value="#ffffff"><br><br>
+        </div>
+
+        <div class="label_and_input">
+            <label for="Material_Shininess">Shininess:</label>
+            <input type="number" id="Material_Shininess" step="1" value="20">
+        </div>
+
+        <br>
+
+        <label class="centered_p">Object Attributes</label>
+
+        <label>Translation</label>
+        <div class="transform-grid">
+            <input type="number" id="Model_X_Pos" step="5" value="0">
+            <input type="number" id="Model_Y_Pos" step="5" value="0">
+            <input type="number" id="Model_Z_Pos" step="5" value="0">
+        </div>
+
+        <label>Rotation</label>
+        <div class="transform-grid">
+            <input type="number" id="Model_X_Rot" step="5" value="0">
+            <input type="number" id="Model_Y_Rot" step="5" value="0">
+            <input type="number" id="Model_Z_Rot" step="5" value="0">
+        </div>
+
+        <label>Scale</label>
+        <div class="transform-grid">
+            <input type="number" id="Model_X_Scale" step="5" value="20">
+            <input type="number" id="Model_Y_Scale" step="5" value="20">
+            <input type="number" id="Model_Z_Scale" step="5" value="20">
+        </div>
+
+
     </div>
-    </div>
+    
 
 </body>
 </html>

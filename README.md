@@ -7,6 +7,8 @@ Try it out!: https://camerondetig.github.io/3D_Model_Viewer/
 ## Features
 
 - Interactive 3D model rendering using WebGL
+- Phong based point lighting
 - Trackball Camera Controlls
-- Support for multiple models (bunny, teapot)
 
+
+![UI screenshot](media/model_viewer_UI.png)

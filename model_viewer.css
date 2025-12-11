@@ -3,6 +3,8 @@ body {
     margin: 0;
     padding: 0;
     display: flex;
+    font-family: Arial, Helvetica, sans-serif;
+    color:#ffffff; /* font color */
 }
 
 .canvas-container {
@@ -13,99 +15,29 @@ body {
     padding-left: 20px;
 }
 
+#gl-canvas {
+    display: block;
+}
+
 .controls-container {
     flex: 0 0 auto;
     display: flex;
     flex-direction: column;
-    padding: 20px;
+    padding: 15px;
     overflow-y: auto;
-}
-
-#gl-canvas {
-    display: block;
-    border: 2px solid #444;
 }
 
 .info {
   display: flex;
   flex-direction: column;
   align-items: center;
+  font-size: .8rem;
 }
 
-.info li {
-  font-family: Arial, Helvetica, sans-serif;
-  color:#ffffff;
+.info ul {
+  margin-top: 0;
 }
 
-.reset-info-container {
-  display: flex;
-  justify-content: center;
-  gap: 20px;
-}
-
-
-.slider-column {
-    display: flex;
-    flex-direction: column;
-}
-.slider-group {
-    margin-bottom: 5px;
-}
-
-.slider-group .sliderParagraph {
-    margin-bottom: 5px;
-}
-
-.slider-group .slidecontainer {
-    margin-bottom: 0;
-}
-
-
-
-
-/* ---------------- Sliders ------------------- */
-.slidecontainer {
-  width: 100%;
-}
-
-.slider {
-  -webkit-appearance: none;
-  width: 100%;
-  height: 15px;
-  border-radius: 5px;
-  background: #d3d3d3;
-  outline: none;
-  opacity: 0.7;
-  -webkit-transition: .2s;
-  transition: opacity .2s;
-}
-
-.slider:hover {
-  opacity: 1;
-}
-
-.slider::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 25px;
-  height: 25px;
-  border-radius: 50%;
-  background: #04AA6D;
-  cursor: pointer;
-}
-
-.slider::-moz-range-thumb {
-  width: 25px;
-  height: 25px;
-  border-radius: 50%;
-  background: #04AA6D;
-  cursor: pointer;
-}
-
-.sliderParagraph {
-  font-family: Arial, Helvetica, sans-serif;
-  color:#ffffff;
-}
 
 
 /* ---------------- Buttons ------------------- */
@@ -113,15 +45,38 @@ body {
   background-color: #ddd;
   border: none;
   color: black;
-  padding: 10px 20px;
+  padding: 10px 15px;
   text-align: center;
   text-decoration: none;
   display: inline-block;
-  margin: 4px 2px;
+  margin: 2px 2px;
   cursor: pointer;
-  border-radius: 16px;
+  border-radius: 10px;
 }
 
 .button:hover {
   background-color: #f1f1f1;
+}
+
+.reset-button-container {
+  display: flex;
+  justify-content: center;
+}
+
+
+/* ---------------- Inputs ------------------- */
+.transform-grid {
+    display: flex;
+    gap: 5px; /*  space between the cells */
+}
+
+.centered_p {
+  text-align: center;
+  font-size: 1.25rem;
+}
+
+
+.label_and_input {
+    display: flex;
+    gap: 5px; /*  space between the cells */
 }

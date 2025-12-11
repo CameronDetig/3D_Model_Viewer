@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Draw Application</title>
+</head>
+
+<body>
+    <!-- <script type="text/javascript" src="./common/utils.js"></script> -->
+    <!-- <script type="text/javascript" src="./common/MV.js"></script> -->
+    <script type="text/javascript" src="../common/matrix_vector_utils.js"></script>
+    <script type="text/javascript" src="../common/init_shaders.js"></script>
+
+    <script type="text/javascript" src="./createTeapotData.js"></script>
+    <script type="text/javascript" src="./teapot_patches.js"></script>
+    <script type="text/javascript" src="./teapot_vertices.js"></script>
+    <script type="text/javascript" src="./teapot_test.js"></script>
+
+
+
+    <div class="canvas-container">
+        <canvas id="gl-canvas" width="512" height="512"> 
+            Your browser does not support the HTML5 canvas element
+        </canvas>
+    </div>
+
+    <script id="vertex-shader" type="x-shader/x-vertex">
+        #version 300 es
+        precision mediump float;
+
+        in vec4 aPosition;
+        in vec4 aNormal;
+
+        uniform mat4 uModelToWorldMatrix;
+
+        out vec4 vColor;
+
+        void main() {
+            gl_Position = uModelToWorldMatrix * aPosition;
+
+            // Use the normal to create some visual variation
+            // (simple lighting: map normal to color)
+            vColor = vec4(abs(aNormal.xyz) * 0.5 + 0.5, 1.0);
+        }
+    </script>
+
+
+    <script id = "fragment-shader" type = "x-shader/x-fragment">
+        #version 300 es
+        precision mediump float;
+
+        in vec4 vColor;
+        out vec4 fColor;
+
+        void main() {
+            fColor = vColor;
+        }
+    </script>
+
+</body>
+
+</html>

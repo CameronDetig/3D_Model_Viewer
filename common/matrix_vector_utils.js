@@ -34,10 +34,18 @@ function isMatrix(v) {
   return false;
 }
 
-function radians( degrees ) {
-    return degrees * Math.PI / 180.0;
+function radians(degrees) {
+  return degrees * Math.PI / 180.0;
 }
 
+function magnitude(vec) {
+  // calculate the magnitude of a vector
+  sum = 0;
+  for (let i = 0; i < vec.length; i++) {
+    sum += vec[i] * vec[i]
+  }
+  return Math.sqrt(sum)
+}
 //----------------------------------------------------------------------------
 
 
@@ -360,13 +368,51 @@ function add( u, v )
     }
 }
 
+function add_legacy( u, v ) {
+    var result = [];
+
+    if ( u.matrix && v.matrix ) {
+        if ( u.length != v.length ) {
+            throw "add_legacy(): trying to add matrices of different dimensions";
+        }
+
+        for ( var i = 0; i < u.length; ++i ) {
+            if ( u[i].length != v[i].length ) {
+                throw "add_legacy(): trying to add matrices of different dimensions";
+            }
+            result.push( [] );
+            for ( var j = 0; j < u[i].length; ++j ) {
+                result[i].push( u[i][j] + v[i][j] );
+            }
+        }
+
+        result.matrix = true;
+
+        return result;
+    }
+    else if ( u.matrix && !v.matrix || !u.matrix && v.matrix ) {
+        throw "add_legacy(): trying to add matrix and non-matrix variables";
+    }
+    else {
+        if ( u.length != v.length ) {
+            throw "add_legacy(): vectors are not the same dimension";
+        }
+
+        for ( var i = 0; i < u.length; ++i ) {
+            result.push( u[i] + v[i] );
+        }
+
+        return result;
+    }
+}
+
 //----------------------------------------------------------------------------
 
 function subtract( u, v )
 {
 
   if ( u.type != v.type ) {
-      throw "add(): trying to add different types";
+      throw "add(): trying to subtract different types";
   }
   if(isVector(u)){
     if(u.type == 'vec2')  var result =vec2();
@@ -448,11 +494,11 @@ function mult( u, v )
     }
     return result;
   }
-  else if (u.type=='mat4'&&v.type=='mat4'){
+  else if (u.type=='mat4' && v.type=='mat4'){
     result = mat4();
-    for(i=0;i<4;i++) for(j=0;j<4;j++) {
+    for (i=0; i<4; i++) for (j=0; j<4; j++) {
       result[i][j] = 0.0;
-      for(var k=0;k<4;k++) result[i][j]+=u[i][k]*v[k][j];
+      for (var k=0; k<4; k++) result[i][j] += u[i][k] * v[k][j];
     }
 
     return result;
@@ -691,6 +737,24 @@ function cross( u, v )
     }
 
     throw "cross: types aren't matched vec3 or vec4";
+}
+
+function cross_legacy( u, v ) {
+    if ( !Array.isArray(u) || u.length < 3 ) {
+        throw "cross_legacy(): first argument is not a vector of at least 3";
+    }
+
+    if ( !Array.isArray(v) || v.length < 3 ) {
+        throw "cross_legacy(): second argument is not a vector of at least 3";
+    }
+
+    var result = [ 
+        u[1]*v[2] - u[2]*v[1],
+        u[2]*v[0] - u[0]*v[2],
+        u[0]*v[1] - u[1]*v[0]
+    ];
+
+    return result;
 }
 
 //----------------------------------------------------------------------------
@@ -1082,12 +1146,18 @@ function inverse(m)
 
 function normalMatrix(m, flag)
 {
-    if(m.type!='mat4') throw "normalMatrix: input not a mat4";
-    var a = inverse(transpose(m));
-    if(arguments.length == 1 &&flag == false) return a;
+    // The normal matrix is necessary because normal vectors transform differently 
+    // than position vectors - they need the inverse-transpose of the transformation 
+    // matrix to remain perpendicular to surfaces after non-uniform scaling or shearing.
+    if (m.type!='mat4') throw "normalMatrix: input not a mat4";
 
+    // invert and transpose the matrix
+    var a = inverse(transpose(m));
+    if (arguments.length == 1 &&flag == false) return a;
+
+    // take the top left 3x3 values from the 4x4 matrix
     var b = mat3();
-    for(var i=0;i<3;i++) for(var j=0; j<3; j++) b[i][j] = a[i][j];
+    for (var i=0;i<3;i++) for(var j=0; j<3; j++) b[i][j] = a[i][j];
 
     return b;
 }
