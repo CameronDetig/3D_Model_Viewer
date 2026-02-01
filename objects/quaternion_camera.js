@@ -1,27 +1,153 @@
 // Handles the quaternion camera system
 
-var rotAngle = 0.0;
-var rotAxis = vec3(0, 0, 1);
-var lastBallPos = vec3(0, 0, 0);
-
-var rotationQuaternion = vec4(1, 0, 0, 0);
-var initialCameraPosition = vec3(0.0, 0.0, 1.0); // Initial camera position
-var cameraRadius = 250;
-var cameraWorldPosition, cameraWorldPositionLoc;
-
-var aspectRatio = 1.0; // Viewport aspect ratio
-
-var lookAtPoint = vec3(0.0, 20, 0.0);
-const cameraUpVector = vec3(0.0, 1.0, 0.0);
+var cameraController;
 
 const defaultNear = 1;
-var near = defaultNear;
-
 const defaultFar = 1000;
-var far = defaultFar;
-
 const defaultFOV = 45;
-var fov = defaultFOV;  // Field-of-view in Y direction angle (in degrees)
+
+class QuaternionCamera {
+  constructor() {
+    this.rotAngle = 0.0;
+    this.rotAxis = vec3(0, 0, 1);
+    this.lastBallPos = vec3(0, 0, 0);
+
+    this.rotationQuaternion = vec4(1, 0, 0, 0);
+    this.initialCameraPosition = vec3(0.0, 0.0, 1.0);
+    this.cameraRadius = 250;
+    this.cameraWorldPosition = vec3(0.0, 0.0, 0.0);
+
+    this.lookAtPoint = vec3(0.0, 20, 0.0);
+    this.cameraUpVector = vec3(0.0, 1.0, 0.0);
+
+    this.near = defaultNear;
+    this.far = defaultFar;
+    this.fov = defaultFOV;
+
+    this.modelViewMatrix = mat4();
+    this.update();
+  }
+
+  update() {
+    // Rotate the initial camera direction by the accumulated quaternion
+    let rotatedDirection = quatRotatePoint(this.initialCameraPosition, this.rotationQuaternion);
+    
+    // Scale by camera radius and add to lookAt point
+    this.cameraWorldPosition = vec3(
+      this.lookAtPoint[0] + rotatedDirection[0] * this.cameraRadius,
+      this.lookAtPoint[1] + rotatedDirection[1] * this.cameraRadius,
+      this.lookAtPoint[2] + rotatedDirection[2] * this.cameraRadius
+    );
+
+    this.modelViewMatrix = lookAtCamera(this.cameraWorldPosition, this.lookAtPoint, this.cameraUpVector);
+  }
+
+  startOrbit(normX, normY) {
+    this.lastBallPos = calcTrackballPosition(normX, normY);
+  }
+
+  orbitTo(normX, normY) {
+    let curBallPos = calcTrackballPosition(normX, normY);
+    let rotation_speed = 1;
+
+    let ballDelta = subtract(curBallPos, this.lastBallPos);
+
+    if (magnitude(ballDelta) > 0.0) {
+      this.rotAngle = rotation_speed * magnitude(ballDelta);
+      this.rotAxis = cross(this.lastBallPos, curBallPos);
+      this.lastBallPos = curBallPos;
+    }
+
+    this.rotAxis = normalize(this.rotAxis);
+    let cos = Math.cos(this.rotAngle / 2.0);
+    let sin = Math.sin(this.rotAngle / 2.0);
+
+    let rotation = vec4(cos, sin * this.rotAxis[0], sin * this.rotAxis[1], sin * this.rotAxis[2]);
+    this.rotationQuaternion = multq(this.rotationQuaternion, rotation);
+
+    this.update();
+  }
+
+  pan(deltaX, deltaY) {
+    // Rotate the initial camera direction by the accumulated quaternion
+    let rotatedDirection = quatRotatePoint(this.initialCameraPosition, this.rotationQuaternion);
+    
+    // Scale by camera radius and add to lookAt point
+    let cameraPosition = vec3(
+      this.lookAtPoint[0] + rotatedDirection[0] * this.cameraRadius,
+      this.lookAtPoint[1] + rotatedDirection[1] * this.cameraRadius,
+      this.lookAtPoint[2] + rotatedDirection[2] * this.cameraRadius
+    );
+
+    // Calculate camera coordinate system
+    let viewDirection = normalize(subtract(this.lookAtPoint, cameraPosition));
+    let rightVector = normalize(cross(viewDirection, this.cameraUpVector));
+    let upVector = normalize(cross(rightVector, viewDirection));
+
+    // Convert mouse movement to world space movement
+    let panAmount = 0.08; // controls pan sensitivity
+    let rightMovement = mult(-deltaX * panAmount, rightVector);
+    let upMovement = mult(deltaY * panAmount, upVector);
+
+    // Update lookAt point
+    this.lookAtPoint = add(this.lookAtPoint, add(rightMovement, upMovement));
+    this.update();
+  }
+
+  dolly(deltaY) {
+    this.cameraRadius += deltaY * 0.5;
+    this.cameraRadius = Math.max(0.1, Math.min(10000, this.cameraRadius));
+    this.update();
+  }
+
+  reset() {
+    this.near = defaultNear;
+    this.far = defaultFar;
+    this.fov = defaultFOV;
+
+    document.getElementById('Near_Clipping').value = this.near;
+    document.getElementById('Far_Clipping').value = this.far;
+    document.getElementById('Camera_FOV').value = this.fov;
+
+    this.rotAngle = 0.0;
+    this.rotAxis = vec3(0, 0, 1);
+    this.lastBallPos = vec3(0, 0, 0);
+
+    this.rotationQuaternion = vec4(1, 0, 0, 0);
+    this.cameraRadius = 250;
+
+    this.update();
+  }
+
+  focus() {
+    this.lookAtPoint = vec3(0.0, 20, 0.0);
+    this.cameraRadius = 250;
+    this.update();
+  }
+
+  updateClippingPlanes() {
+    let nearInput = getInputValue("Near_Clipping");
+    let farInput = getInputValue("Far_Clipping");
+
+    if (nearInput >= this.far - 1) {
+      this.near = this.far - 1;
+      document.getElementById('Near_Clipping').value = this.near;
+    } else {
+      this.near = nearInput;
+    }
+
+    if (farInput <= this.near + 1) {
+      this.far = this.near + 1;
+      document.getElementById('Far_Clipping').value = this.far;
+    } else {
+      this.far = farInput;
+    }
+  }
+
+  updateFOV() {
+    this.fov = getInputValue("Camera_FOV");
+  }
+}
 
 
 
@@ -87,85 +213,3 @@ function calcTrackballPosition(x, y) {
   return pos;
 }
 
-
-function updateQuatCamera() {
-    // sets the modelViewMatrix based on the quaternion rotation and look at camera system
-
-    // Rotate the initial camera direction by the accumulated quaternion
-    let rotatedDirection = quatRotatePoint(initialCameraPosition, rotationQuaternion);
-    
-    // Scale by camera radius and add to lookAt point
-    cameraWorldPosition = vec3(
-        lookAtPoint[0] + rotatedDirection[0] * cameraRadius,
-        lookAtPoint[1] + rotatedDirection[1] * cameraRadius,
-        lookAtPoint[2] + rotatedDirection[2] * cameraRadius
-    );
-
-    modelViewMatrix = lookAtCamera(cameraWorldPosition, lookAtPoint, cameraUpVector);
-}
-
-
-function resetCamera() {
-    near = defaultNear;
-    far = defaultFar;
-    fov = defaultFOV;
-
-    document.getElementById('Near_Clipping').value = near;
-    document.getElementById('Far_Clipping').value = far;
-    document.getElementById('Camera_FOV').value = fov;
-
-    // Quaternion Trackball Variables
-    rotAngle = 0.0;
-    rotAxis = vec3(0, 0, 1);
-    lastBallPos = vec3(0, 0, 0);
-
-    rotationQuaternion = vec4(1, 0, 0, 0);
-    cameraRadius = 250;
-
-    lastMouseX = 0.0;
-    lastMouseY = 0.0;
-
-    updateQuatCamera();
-}
-
-
-function focusCameraOnModel() {
-
-    lastMouseX = 0.0;
-    lastMouseY = 0.0;
-
-    lookAtPoint = vec3(0.0, 20, 0.0);
-    cameraRadius = 250;
-
-    updateQuatCamera();
-}
-
-
-function updateClippingPlanes() {
-
-    let nearInput = getInputValue("Near_Clipping");
-    let farInput = getInputValue("Far_Clipping");
-
-    if (nearInput >= far - 1) {
-        // Prevent near from going above far
-        near = far - 1;
-        // Update the UI value
-        document.getElementById('Near_Clipping').value = near;
-    } else {
-        near = nearInput;
-    }
-
-    if (farInput <= near + 1) {
-        // Prevent far from going below near
-        far = near + 1;
-        // Update the UI value
-        document.getElementById('Far_Clipping').value = far;
-    } else {
-        far = farInput;
-    }
-}
-
-
-function updateFOV() {
-    fov = getInputValue("Camera_FOV");
-}

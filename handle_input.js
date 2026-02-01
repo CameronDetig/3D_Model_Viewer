@@ -1,218 +1,201 @@
-
 // Variables for viewport interaction
-var leftClickIsDragging = false;
-var lastMouseX, lastMouseY;
+class InputController {
+    constructor(canvas, cameraController, callbacks) {
+        this.canvas = canvas;
+        this.cameraController = cameraController;
+        this.callbacks = callbacks || {};
 
-var middleClickIsDragging = false;
-var rightClickIsDragging = false;
+        this.leftClickIsDragging = false;
+        this.middleClickIsDragging = false;
+        this.rightClickIsDragging = false;
+        this.lastMouseX = 0;
+        this.lastMouseY = 0;
 
+        this.bindEvents();
+    }
 
-function handeInput() {
+    bindEvents() {
+        this.canvas.addEventListener('mousedown', e => {
+            e.preventDefault(); // Prevent default browser behavior (middle-click pan, right-click menu)
 
-    // ---------------- Mouse camera controls ----------------------------------
-    canvas.addEventListener('mousedown', e => {
-        e.preventDefault(); // Prevent default browser behavior (middle-click pan, right-click menu)
+            switch (e.button) {
+                case 0: // Left button
+                    this.leftClickIsDragging = true;
+                    let mouse_pos = this.normalizeMousePosition(e.clientX, e.clientY)
+                    if (this.cameraController) {
+                        this.cameraController.startOrbit(mouse_pos[0], mouse_pos[1]);
+                    }
+                    break;
+                case 1: // Middle button
+                    this.middleClickIsDragging = true;
+                    this.lastMouseX = e.clientX;
+                    this.lastMouseY = e.clientY;
+                    break;
+                case 2: // Right button
+                    this.rightClickIsDragging = true;
+                    this.lastMouseX = e.clientX;
+                    this.lastMouseY = e.clientY;
+                    break;
+            }
+        });
 
-        switch (e.button) {
-            case 0: // Left button
-                leftClickIsDragging = true;
-                let mouse_pos = normalizeMousePosition(e.clientX, e.clientY)
-                lastBallPos = calcTrackballPosition(mouse_pos[0], mouse_pos[1]);
-                break;
-            case 1: // Middle button
-                middleClickIsDragging = true;
-                lastMouseX = e.clientX;
-                lastMouseY = e.clientY;
-                break;
-            case 2: // Right button
-                rightClickIsDragging = true;
-                lastMouseX = e.clientX;
-                lastMouseY = e.clientY;
-                break;
-        }
-	});
+        this.canvas.addEventListener('mouseup', e => {
+            // If mouse released, set dragging variables to false.
+            switch (e.button) {
+                case 0: // Left button
+                    this.leftClickIsDragging = false;
+                    break;
+                case 1: // Middle button
+                    this.middleClickIsDragging = false;
+                    break;
+                case 2: // Right button
+                    this.rightClickIsDragging = false;
+                    break;
+            }
+        });
 
-	canvas.addEventListener('mouseup', e => {
-		// If mouse released, set dragging variables to false.
-        switch (e.button) {
-            case 0: // Left button
-                leftClickIsDragging = false;
-                break;
-            case 1: // Middle button
-                middleClickIsDragging = false;
-                break;
-            case 2: // Right button
-                rightClickIsDragging = false;
-                break;
-        }
-	});
+        this.canvas.addEventListener('mousemove', e => {
+            // If mouse is being moved, update camera variables
+            e.preventDefault(); // Prevent default browser behavior (middle-click pan, right-click menu)
 
-	canvas.addEventListener('mousemove', e => {
-		// If mouse is being moved, update camera variables
-        e.preventDefault(); // Prevent default browser behavior (middle-click pan, right-click menu)
+            if (this.leftClickIsDragging || this.middleClickIsDragging || this.rightClickIsDragging) {
+                let mouseDeltaX = (e.clientX - this.lastMouseX);
+                let mouseDeltaY = (e.clientY - this.lastMouseY);
 
-        if (leftClickIsDragging || middleClickIsDragging || rightClickIsDragging){
-            let mouseDeltaX = (e.clientX - lastMouseX);
-            let mouseDeltaY = (e.clientY - lastMouseY);
+                if (this.leftClickIsDragging) { // Trackball orbit the camera
+                    let mouse_pos = this.normalizeMousePosition(e.clientX, e.clientY)
+                    if (this.cameraController) {
+                        this.cameraController.orbitTo(mouse_pos[0], mouse_pos[1]);
+                    }
+                } 
 
-            if (leftClickIsDragging) { // Trackball orbit the camera
-                let mouse_pos = normalizeMousePosition(e.clientX, e.clientY)
-                let curBallPos = calcTrackballPosition(mouse_pos[0], mouse_pos[1]);
-                let rotation_speed = 1;
+                else if (this.middleClickIsDragging) { // pan the camera
+                    if (this.cameraController) {
+                        this.cameraController.pan(mouseDeltaX, mouseDeltaY);
+                    }
+                } 
 
-                let ballDelta = subtract(curBallPos, lastBallPos);
-
-                // If there is a change in position on the trackball
-                if (magnitude(ballDelta) > 0.0) {
-                    // use distance moved along trackball to calculate a rotation amount
-                    rotAngle = rotation_speed * magnitude(ballDelta);
-
-                    // Use cross product to calculate the axis to rotate along
-                    rotAxis = cross(lastBallPos, curBallPos);
-                    
-                    // Save this position for use in the next frame's calculation
-                    lastBallPos = curBallPos;
+                else if (this.rightClickIsDragging) { // move the camera forward and backward
+                    if (this.cameraController) {
+                        this.cameraController.dolly(mouseDeltaY);
+                    }
                 }
 
-                // Update camera variables
-                // normalize the rotation axis
-                rotAxis = normalize(rotAxis);
-                let cos = Math.cos(rotAngle / 2.0);
-                let sin = Math.sin(rotAngle / 2.0);
-
-                let rotation = vec4(cos, sin * rotAxis[0], sin * rotAxis[1], sin * rotAxis[2]);
-                rotationQuaternion = multq(rotationQuaternion, rotation);
-
-                updateQuatCamera();
-            } 
-
-            else if (middleClickIsDragging) { // pan the camera
-
-                // Rotate the initial camera direction by the accumulated quaternion
-                let rotatedDirection = quatRotatePoint(initialCameraPosition, rotationQuaternion);
-                
-                // Scale by camera radius and add to lookAt point
-                let cameraPosition = vec3(
-                    lookAtPoint[0] + rotatedDirection[0] * cameraRadius,
-                    lookAtPoint[1] + rotatedDirection[1] * cameraRadius,
-                    lookAtPoint[2] + rotatedDirection[2] * cameraRadius
-                );
-
-                // Calculate camera coordinate system
-                let viewDirection = normalize(subtract(lookAtPoint, cameraPosition));
-                let rightVector = normalize(cross(viewDirection, cameraUpVector));
-                let upVector = normalize(cross(rightVector, viewDirection));
-
-                // Convert mouse movement to world space movement
-                let panAmount = 0.08; // controls pan sensitivity
-                let rightMovement = mult(-mouseDeltaX * panAmount, rightVector);
-                let upMovement = mult(mouseDeltaY * panAmount, upVector);
-
-                // Update lookAt point
-                lookAtPoint = add(lookAtPoint, add(rightMovement, upMovement));
-
-                updateQuatCamera();
-            } 
-
-            else if (rightClickIsDragging) { // move the camera forward and backward
-                
-                cameraRadius += mouseDeltaY * 0.5;
-                // clamp values
-                cameraRadius = Math.max(0.1, Math.min(10000, cameraRadius));
-
-                updateQuatCamera();
+                // Save the mouse positions for use in the next frame
+                this.lastMouseX = e.clientX;
+                this.lastMouseY = e.clientY;
             }
+        });
 
-            // Save the mouse positions for use in the next frame
-            lastMouseX = e.clientX;
-            lastMouseY = e.clientY;
+        this.canvas.addEventListener('wheel', e => {
+            e.preventDefault(); // prevent page from scrolling
+
+            if (this.cameraController) {
+                this.cameraController.dolly(e.deltaY);
+            }
+        });
+
+        // Event listener for the Reset button
+        const resetButton = document.getElementById("resetButton");
+        resetButton.addEventListener("click", () => {
+            if (this.cameraController) {
+                this.cameraController.reset();
+            }
+        });
+
+        window.addEventListener("keydown", event => {
+            switch (event.key) {
+                case "r":
+                    if (this.cameraController) {
+                        this.cameraController.reset();
+                    }
+                    break;
+                case "f":
+                    if (this.cameraController) {
+                        this.cameraController.focus();
+                    }
+                    break;
+                default:
+                    console.log("Key Pressed:", event.key);
+            }
+        });
+
+        // UI Inputs
+        if (this.callbacks.updateModelSubdivisions) {
+            this.addListener('Model_Subdivisions', this.callbacks.updateModelSubdivisions);
         }
-	});
 
-    canvas.addEventListener('wheel', e => {
-        e.preventDefault(); // prevent page from scrolling
+        this.addListener('Near_Clipping', () => {
+            if (this.cameraController) {
+                this.cameraController.updateClippingPlanes();
+            }
+        });
+        this.addListener('Far_Clipping', () => {
+            if (this.cameraController) {
+                this.cameraController.updateClippingPlanes();
+            }
+        });
 
-        // adjust camera radius based on mouse scroll wheel
-        cameraRadius += e.deltaY * 0.5;
-        // clamp values
-        cameraRadius = Math.max(0.1, Math.min(10000, cameraRadius));
+        this.addListener('Camera_FOV', () => {
+            if (this.cameraController) {
+                this.cameraController.updateFOV();
+            }
+        });
 
-        updateQuatCamera();
-    });
+        // Lighting inputs
+        if (this.callbacks.updateLighting) {
+            this.addListener('Light_X_Pos', this.callbacks.updateLighting);
+            this.addListener('Light_Y_Pos', this.callbacks.updateLighting);
+            this.addListener('Light_Z_Pos', this.callbacks.updateLighting);
 
-    // Event listener for the Reset button
-	const resetButton = document.getElementById("resetButton");
-	resetButton.addEventListener("click", resetCamera);
+            this.addListener('Light_Diffuse_Intensity', this.callbacks.updateLighting);
+            this.addListener('Light_Specular_Intensity', this.callbacks.updateLighting);
+            this.addListener('Light_Ambient_Intensity', this.callbacks.updateLighting);
 
-    window.addEventListener("keydown", function(event) {
-        switch (event.key) {
-            case "r":
-                resetCamera();
-                break;
-            case "f":
-                focusCameraOnModel();
-                break;
-            default:
-                console.log("Key Pressed:", event.key);
+            this.addListener('light_diffuse_color', this.callbacks.updateLighting);
+            this.addListener('light_specular_color', this.callbacks.updateLighting);
+            this.addListener('light_ambient_color', this.callbacks.updateLighting);
+
+            this.addListener('material_diffuse_color', this.callbacks.updateLighting);
+            this.addListener('material_specular_color', this.callbacks.updateLighting);
+            this.addListener('material_ambient_color', this.callbacks.updateLighting);
+
+            this.addListener('Material_Shininess', this.callbacks.updateLighting);
         }
-    });
 
-    // UI Inputs
-    addListener('Model_Subdivisions', updateModelSubdivisions);
+        // Model Inputs
+        if (this.callbacks.updateModelTransform) {
+            this.addListener('Model_X_Pos', this.callbacks.updateModelTransform);
+            this.addListener('Model_Y_Pos', this.callbacks.updateModelTransform);
+            this.addListener('Model_Z_Pos', this.callbacks.updateModelTransform);
 
-    addListener('Near_Clipping', updateClippingPlanes);
-    addListener('Far_Clipping', updateClippingPlanes);
+            this.addListener('Model_X_Rot', this.callbacks.updateModelTransform);
+            this.addListener('Model_Y_Rot', this.callbacks.updateModelTransform);
+            this.addListener('Model_Z_Rot', this.callbacks.updateModelTransform);
 
-    addListener('Camera_FOV', updateFOV);
+            this.addListener('Model_X_Scale', this.callbacks.updateModelTransform);
+            this.addListener('Model_Y_Scale', this.callbacks.updateModelTransform);
+            this.addListener('Model_Z_Scale', this.callbacks.updateModelTransform);
+        }
+    }
 
-    // Lighting inputs
-    addListener('Light_X_Pos', updateLighting);
-    addListener('Light_Y_Pos', updateLighting);
-    addListener('Light_Z_Pos', updateLighting);
+    normalizeMousePosition(mouseX, mouseY) {
+        // Take in event.clientX and event.clientY and return normalized mouse X and Y
+        // normalizes values to range (-1, 1)
+        var rect = this.canvas.getBoundingClientRect();
+        var localX = mouseX - rect.left;
+        var localY = mouseY - rect.top;
+        var x = 2 * localX / rect.width - 1;
+        var y = 2 * (rect.height - localY) / rect.height - 1;
 
-    addListener('Light_Diffuse_Intensity', updateLighting);
-    addListener('Light_Specular_Intensity', updateLighting);
-    addListener('Light_Ambient_Intensity', updateLighting);
-
-    addListener('light_diffuse_color', updateLighting);
-    addListener('light_specular_color', updateLighting);
-    addListener('light_ambient_color', updateLighting);
-
-    addListener('material_diffuse_color', updateLighting);
-    addListener('material_specular_color', updateLighting);
-    addListener('material_ambient_color', updateLighting);
-
-    addListener('Material_Shininess', updateLighting);
-
-    // Model Inputs
-    addListener('Model_X_Pos', updateModelTransform);
-    addListener('Model_Y_Pos', updateModelTransform);
-    addListener('Model_Z_Pos', updateModelTransform);
-
-    addListener('Model_X_Rot', updateModelTransform);
-    addListener('Model_Y_Rot', updateModelTransform);
-    addListener('Model_Z_Rot', updateModelTransform);
-
-    addListener('Model_X_Scale', updateModelTransform);
-    addListener('Model_Y_Scale', updateModelTransform);
-    addListener('Model_Z_Scale', updateModelTransform);
-}
-
-
-function addListener(elemID, functionName) {
-    let elem = document.getElementById(elemID);
-    elem.addEventListener('input', functionName);
-}
-
-
-function normalizeMousePosition(mouseX, mouseY) {
-  // Take in event.clientX and event.clientY and return normalized mouse X and Y 
-  // normalizes values to range (-1, 1)
-  var rect = canvas.getBoundingClientRect();
-  var localX = mouseX - rect.left;
-  var localY = mouseY - rect.top;
-  var x = 2 * localX / rect.width - 1;
-  var y = 2 * (rect.height - localY) / rect.height - 1;
-
-  return [x, y]
+        return [x, y]
+    }
+    
+    addListener(elemID, functionName) {
+        let elem = document.getElementById(elemID);
+        if (!elem) {
+            throw new Error(`Missing UI element: ${elemID}`);
+        }
+        elem.addEventListener('input', functionName);
+    }
 }

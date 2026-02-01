@@ -1,6 +1,7 @@
 var gl, canvas;    
-
-var modelViewMatrix;
+var grid;
+var aspectRatio = 1.0;
+var inputController;
 
 
 function resizeCanvas() {
@@ -52,20 +53,25 @@ window.onload = function init() {
     // Construct everything needed for the model program (model.js)
     makeModelProgram(); 
 
-    // Use the handle_input.js script to manage functionality for user input (handle_input.js)
-    handeInput();
-
-    // Set initial camera position (quaterion_camera.js)
-    updateQuatCamera();
+    // Set initial camera position (quaternion_camera.js)
+    cameraController = new QuaternionCamera();
 
     // Construct everything needed for the lighting program (light.js)
     makeLightProgram();
 
+    // Use the handle_input.js script to manage functionality for user input (handle_input.js)
+    inputController = new InputController(canvas, cameraController, {
+        updateLighting: () => lightController.updateFromUI(modelController.program, modelController.vao),
+        updateModelTransform: () => modelController.updateTransformFromUI(),
+        updateModelSubdivisions: () => modelController.updateSubdivisionsFromUI()
+    });
+
     // Use the grid.js script to make the grid and axis lines (grid.js)
-    makeGridProgram();
+    grid = new Grid(gl);
+    grid.init(cameraController.modelViewMatrix);
 
     // Update lighting values with those from the UI (light.js)
-    updateLighting();
+    lightController.updateFromUI(modelController.program, modelController.vao);
 
     render();
 }
@@ -73,38 +79,23 @@ window.onload = function init() {
 
 // Render Loop
 function render() {
+    if (!modelController || !grid || !lightController || !cameraController) {
+        requestAnimationFrame(render);
+        return;
+    }
     gl.clear( gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
     // calculate the camera perspective matrix
-    let projectionMatrix = perspectiveCamera(fov, aspectRatio, 1, near, far);
-
-    // calculate normal matrix to transform normals
-    transformNormalsMatrix = normalMatrix(modelModelToWorldMatrix, true);
+    let projectionMatrix = perspectiveCamera(cameraController.fov, aspectRatio, 1, cameraController.near, cameraController.far);
 
     // ------------------------  Draw Model  ----------------------------
-    gl.useProgram(modelProgram);
-    gl.bindVertexArray(modelVAO);
-    gl.uniformMatrix4fv(modelProjectionMatrixLoc, false, flatten(projectionMatrix));
-    gl.uniformMatrix4fv(modelViewMatrixLoc, false, flatten(modelViewMatrix));
-    gl.uniformMatrix3fv(transformNormalsMatrixLoc, false, flatten(transformNormalsMatrix));
-    gl.uniform3fv(cameraWorldPositionLoc, flatten(cameraWorldPosition));
-    gl.drawArrays(gl.TRIANGLES, 0, model_geometry[0].length)
+    modelController.draw(cameraController.modelViewMatrix, projectionMatrix, cameraController.cameraWorldPosition);
 
     // ------------------------  Draw grid  ----------------------------
-    gl.useProgram(gridProgram);
-    gl.bindVertexArray(gridVAO);
-    gl.uniformMatrix4fv(gridProjectionMatrixLoc, false, flatten(projectionMatrix));
-    gl.uniformMatrix4fv(gridModelViewMatrixLoc, false, flatten(modelViewMatrix));
-    gl.drawArrays(gl.LINES, 0, gridVertexCount);
+    grid.draw(cameraController.modelViewMatrix, projectionMatrix);
 
     // ------------------------  Draw light Point  ----------------------------
-    gl.useProgram(lightProgram);
-    gl.bindVertexArray(lightVAO);
-    gl.uniformMatrix4fv(lightProjectionMatrixLoc, false, flatten(projectionMatrix));
-    gl.uniformMatrix4fv(lightModelViewMatrixLoc, false, flatten(modelViewMatrix));
-    gl.drawArrays(gl.LINE_LOOP, 0, 8);
-    gl.drawArrays(gl.LINE_LOOP, 8, 8);
-    gl.drawArrays(gl.LINE_LOOP, 16, 8);
+    lightController.draw(cameraController.modelViewMatrix, projectionMatrix);
 
 
     gl.bindVertexArray(null);
