@@ -11,4 +11,4 @@ Try it out!: https://camerondetig.github.io/3D_Model_Viewer/
 - Trackball Camera Controlls
 
 
-![UI screenshot](media/model_viewer_UI.png)
+![UI screenshot](media/model_viewer_UI.jpeg)
