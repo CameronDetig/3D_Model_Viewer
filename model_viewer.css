@@ -1,82 +1,256 @@
-body {
-    background-color: #1f1f1f; 
-    margin: 0;
-    padding: 0;
-    display: flex;
-    font-family: Arial, Helvetica, sans-serif;
-    color:#ffffff; /* font color */
+:root {
+    color-scheme: dark;
+    --bg: #0f1116;
+    --bg-elev: #161a22;
+    --bg-elev-2: #1c2230;
+    --text: #d9dee7;
+    --muted: #98a2b3;
+    --accent: #4cc9f0;
+    --accent-2: #22c55e;
+    --danger: #f97316;
+    --border: #2b3345;
+    --shadow: 0 12px 30px rgba(4, 6, 10, 0.55);
+    --radius-lg: 16px;
+    --radius-md: 12px;
+    --radius-sm: 8px;
+    --panel-gap: 16px;
 }
 
-.canvas-container {
-    flex: 1;
+* {
+    box-sizing: border-box;
+}
+
+html, body {
+    height: 100%;
+}
+
+body {
+    margin: 0;
+    background: radial-gradient(1200px 600px at 10% 10%, #1a2030 0%, #0f1116 50%, #0b0d12 100%);
+    color: var(--text);
+    font-family: "Trebuchet MS", "Segoe UI", Tahoma, sans-serif;
+}
+
+.app {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 360px;
+    height: 100vh;
+    gap: 0;
+    overflow: hidden;
+}
+
+.viewport {
+    position: relative;
     display: flex;
-    align-items: center;
-    justify-content: left;
-    padding-left: 20px;
+    align-items: stretch;
+    justify-content: stretch;
+    padding: 18px;
+    height: 100vh;
 }
 
 #gl-canvas {
-    display: block;
+    width: 100%;
+    height: 100%;
+    border-radius: var(--radius-lg);
+    background: linear-gradient(135deg, rgba(21, 27, 38, 0.85), rgba(10, 12, 18, 0.9));
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04), var(--shadow);
 }
 
-.controls-container {
-    flex: 0 0 auto;
+.hud {
+    position: absolute;
+    left: 36px;
+    top: 32px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: rgba(15, 17, 22, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(10px);
+    font-size: 0.85rem;
+}
+
+.hud-title {
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 0.65rem;
+    color: var(--muted);
+}
+
+.hud-sub {
+    margin-top: 4px;
+    color: var(--text);
+    font-weight: 600;
+}
+
+.sidebar {
     display: flex;
     flex-direction: column;
-    padding: 15px;
+    gap: var(--panel-gap);
+    padding: 18px 18px 28px;
+    background: linear-gradient(180deg, rgba(18, 22, 31, 0.95), rgba(12, 14, 20, 0.9));
+    border-left: 1px solid var(--border);
     overflow-y: auto;
 }
 
-.info {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  font-size: .8rem;
+.sidebar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: var(--radius-lg);
+    background: var(--bg-elev);
+    box-shadow: var(--shadow);
 }
 
-.info ul {
-  margin-top: 0;
+.app-title {
+    font-size: 1.1rem;
+    font-weight: 700;
 }
 
+.app-subtitle {
+    font-size: 0.78rem;
+    color: var(--muted);
+}
 
+.panel {
+    padding: 14px 16px 16px;
+    border-radius: var(--radius-lg);
+    background: var(--bg-elev);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+}
 
-/* ---------------- Buttons ------------------- */
+.panel h2 {
+    margin: 0 0 10px;
+    font-size: 0.95rem;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    color: var(--muted);
+}
+
+.panel-body {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.panel-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+}
+
+.hint-list {
+    margin: 0;
+    padding-left: 16px;
+    display: grid;
+    gap: 6px;
+    font-size: 0.82rem;
+    color: var(--text);
+}
+
+.field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.field-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+label {
+    font-size: 0.82rem;
+    color: var(--muted);
+}
+
+input[type="number"],
+input[type="color"] {
+    background: var(--bg-elev-2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: var(--radius-sm);
+    padding: 8px 10px;
+    font-size: 0.9rem;
+    outline: none;
+}
+
+input[type="number"]:focus,
+input[type="color"]:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(76, 201, 240, 0.25);
+}
+
+input[type="color"] {
+    padding: 4px 6px;
+    height: 38px;
+}
+
+.transform-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+}
+
 .button {
-  background-color: #ddd;
-  border: none;
-  color: black;
-  padding: 10px 15px;
-  text-align: center;
-  text-decoration: none;
-  display: inline-block;
-  margin: 2px 2px;
-  cursor: pointer;
-  border-radius: 10px;
+    background-color: #2a3346;
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 10px 14px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 0.7rem;
+    cursor: pointer;
+    border-radius: var(--radius-md);
+    transition: transform 120ms ease, box-shadow 120ms ease, background 120ms ease;
 }
 
 .button:hover {
-  background-color: #f1f1f1;
+    background-color: #333f56;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 14px rgba(4, 6, 10, 0.5);
 }
 
-.reset-button-container {
-  display: flex;
-  justify-content: center;
+.button.primary {
+    background: linear-gradient(135deg, #1d4ed8, #0ea5e9);
+    border-color: transparent;
+    color: #f8fafc;
 }
 
+@media (max-width: 1100px) {
+    .app {
+        grid-template-columns: 1fr;
+        grid-template-rows: 1fr auto;
+    }
 
-/* ---------------- Inputs ------------------- */
-.transform-grid {
-    display: flex;
-    gap: 5px; /*  space between the cells */
+    .sidebar {
+        border-left: none;
+        border-top: 1px solid var(--border);
+    }
 }
 
-.centered_p {
-  text-align: center;
-  font-size: 1.25rem;
-}
+@media (max-width: 700px) {
+    .viewport {
+        padding: 12px;
+    }
 
+    .sidebar {
+        padding: 12px;
+    }
 
-.label_and_input {
-    display: flex;
-    gap: 5px; /*  space between the cells */
+    .sidebar-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .field-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .transform-grid {
+        grid-template-columns: 1fr 1fr;
+    }
 }

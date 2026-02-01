@@ -6,12 +6,14 @@ var modelViewMatrix;
 function resizeCanvas() {
     // Called when the window is resized. Updates the canvas element size
     const canvas = document.getElementById("gl-canvas");
+    const rect = canvas.getBoundingClientRect();
+    const pixelRatio = window.devicePixelRatio || 1;
 
-    // Calculate available space 
-    canvas.height = window.innerHeight * 0.95;
-    canvas.width = window.innerWidth - 500;  // reserve 500 pixels for the controls on the right;
+    // Match drawing buffer to displayed size for correct aspect + sharpness
+    canvas.width = Math.max(1, Math.floor(rect.width * pixelRatio));
+    canvas.height = Math.max(1, Math.floor(rect.height * pixelRatio));
 
-    aspectRatio = canvas.width / canvas.height;
+    aspectRatio = rect.width / rect.height;
     
     // Update WebGL viewport to match new canvas size
     gl.viewport(0, 0, canvas.width, canvas.height);
@@ -24,9 +26,12 @@ window.onload = function init() {
     // Get canvas element
     canvas = document.getElementById("gl-canvas");
     
-    canvas.height = window.innerHeight * 0.95;
-    canvas.width = window.innerWidth - 500;  // reserve 500 pixels for the controls on the right;
-    aspectRatio = canvas.width / canvas.height;
+    const rect = canvas.getBoundingClientRect();
+    const pixelRatio = window.devicePixelRatio || 1;
+
+    canvas.width = Math.max(1, Math.floor(rect.width * pixelRatio));
+    canvas.height = Math.max(1, Math.floor(rect.height * pixelRatio));
+    aspectRatio = rect.width / rect.height;
 
     // Handle window resizing
     window.addEventListener("resize", resizeCanvas);

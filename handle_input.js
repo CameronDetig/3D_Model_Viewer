@@ -208,9 +208,11 @@ function addListener(elemID, functionName) {
 function normalizeMousePosition(mouseX, mouseY) {
   // Take in event.clientX and event.clientY and return normalized mouse X and Y 
   // normalizes values to range (-1, 1)
-  var x = 2 * mouseX / canvas.width - 1;
-  var y = 2 * (canvas.height - mouseY) / canvas.height - 1;
+  var rect = canvas.getBoundingClientRect();
+  var localX = mouseX - rect.left;
+  var localY = mouseY - rect.top;
+  var x = 2 * localX / rect.width - 1;
+  var y = 2 * (rect.height - localY) / rect.height - 1;
 
   return [x, y]
 }
-
